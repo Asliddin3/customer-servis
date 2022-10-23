@@ -56,6 +56,9 @@ func (r *customerRepo) GetCustomerInfo(req *pb.CustomerId) (*pb.CustomerResponse
 	rows, err := r.db.Query(`
 	select a.id,a.district,a.street from address a inner join customer_address ca on ca.address_id=a.id where ca.customer_id=$1
 	`, customerInfo.Id)
+	if err != nil {
+		return &pb.CustomerResponse{}, err
+	}
 	for rows.Next() {
 		addressResp := pb.AddressResponse{}
 		err = rows.Scan(&addressResp.Id, &addressResp.District, &addressResp.Street)
@@ -86,6 +89,9 @@ func (r *customerRepo) GetListCustomers(req *pb.Empty) (*pb.ListCustomers, error
 	rows, err := r.db.Query(`
 	select id,deleted_at from customer where deleted_at is not null
 	`)
+	if err != nil {
+		return &pb.ListCustomers{}, err
+	}
 	deletedCust := make(map[int]string)
 	for rows.Next() {
 		var id int
