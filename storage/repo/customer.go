@@ -5,6 +5,10 @@ import (
 )
 
 type CustomerStorageI interface {
-	// CheckField(*pb.CheckFieldRequest) (*pb.CheckFieldResponse,error)
 	CreateCustomer(*pb.CustomerRequest)(*pb.CustomerResponse,error)
+	UpdateCustomer(*pb.CustomerResponse)(*pb.CustomerResponse,error)
+	DeleteCustomer(*pb.CustomerId)(*pb.Empty,error)
+	GetById(*pb.CustomerId)(*pb.CustomerResponsePost,error)
+	GetListCustomers(*pb.Empty)(*pb.ListCustomers,error)
+	GetCustomerInfo(*pb.CustomerId) (*pb.CustomerResponse,error)
 }

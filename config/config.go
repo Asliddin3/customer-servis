@@ -14,8 +14,8 @@ type Config struct{
 	PostgresPassword string
 	LogLevel string
 	RPCPort string
-	ReviewServiceHost string
-	ReviewServicePort string
+	PostServiceHost string
+	PostServicePort int
 }
 func Load() Config{
 	c:=Config{}
@@ -25,7 +25,8 @@ func Load() Config{
 	c.PostgresDatabase=cast.ToString(getOrReturnDefault("POSTGRES_DATABASE","customerdb"))
 	c.PostgresUser=cast.ToString(getOrReturnDefault("POSTGRES_USER","postgres"))
 	c.PostgresPassword=cast.ToString(getOrReturnDefault("POSTGRES_PASSWORD","compos1995"))
-
+	c.PostServiceHost=cast.ToString(getOrReturnDefault("POST_SERVISE_HOST","localhost"))
+	c.PostServicePort=cast.ToInt(getOrReturnDefault("POST_SERVISE_PORT",8820))
 	c.LogLevel=cast.ToString(getOrReturnDefault("LOG_LEVEL","debug"))
 
 	c.RPCPort=cast.ToString(getOrReturnDefault("RPC_PORT",":8810"))
