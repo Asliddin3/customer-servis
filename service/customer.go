@@ -64,14 +64,13 @@ func (s *CustomerService) GetById(ctx context.Context, req *pb.CustomerId) (*pb.
 			Id:          post.Id,
 			CreatedAt:   post.CreatedAt,
 			UpdatedAt:   post.UpdatedAt,
-			DeleteAt:    post.DeleteAt,
 		}
 		for _, media := range post.Media {
 			postResp.Media = append(postResp.Media, &pb.MediasResponse{
-				PostId: media.PostId,
-				Name:   media.Name,
-				Link:   media.Link,
-				Type:   media.Type,
+				Id:   media.Id,
+				Name: media.Name,
+				Link: media.Link,
+				Type: media.Type,
 			})
 		}
 		postsRespose = append(postsRespose, &postResp)
@@ -114,10 +113,10 @@ func (s *CustomerService) GetListCustomers(ctx context.Context, req *pb.Empty) (
 			}
 			for _, media := range post.Media {
 				mediaResp := pb.MediasResponse{
-					PostId: media.PostId,
-					Link:   media.Link,
-					Name:   media.Name,
-					Type:   media.Type,
+					Id:   media.Id,
+					Link: media.Link,
+					Name: media.Name,
+					Type: media.Type,
 				}
 				postResp.Media = append(postResp.Media, &mediaResp)
 			}
