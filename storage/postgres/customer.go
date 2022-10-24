@@ -118,6 +118,14 @@ func (r *customerRepo) GetListCustomers(req *pb.Empty) (*pb.ListCustomers, error
 		if err != nil {
 			return &pb.ListCustomers{}, err
 		}
+		addreesResp := pb.AddressResponse{}
+		err = r.db.QueryRow(`
+		select a.id,a.district,a.street from address a inner join customer_address ca on ca.address_id=a.id where ca.customer_id=$1
+		`, customerResp.Id).Scan(&addreesResp.Id, &addreesResp.District, &addreesResp.Street)
+		if err != nil {
+			return &pb.ListCustomers{}, err
+		}
+		customerResp.Adderesses = append(customerResp.Adderesses, &addreesResp)
 
 		if val, ok := deletedCust[int(customerResp.Id)]; ok {
 			customerResp.DeletedAt = val

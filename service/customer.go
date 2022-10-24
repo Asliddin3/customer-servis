@@ -98,6 +98,32 @@ func (s *CustomerService) DeleteCustomer(ctx context.Context, req *pb.CustomerId
 }
 func (s *CustomerService) GetListCustomers(ctx context.Context, req *pb.Empty) (*pb.ListCustomers, error) {
 	customers, err := s.storage.Customer().GetListCustomers(req)
+	for _, customer := range customers.ActiveCustomers {
+		posts, err := s.Client.PostServise().GetPostCustomerId(ctx, &post.CustomerId{Id: customer.Id})
+		if err != nil {
+			s.logger.Error("error gettinf customer posts", l.Any("error getting customer post", err))
+			return &pb.ListCustomers{}, status.Error(codes.Internal, "something went wrong")
+		}
+		for _, post := range posts.Posts {
+			postResp := pb.PostResponse{
+				Id:          post.Id,
+				Name:        post.Name,
+				Description: post.Description,
+				CreatedAt:   post.CreatedAt,
+				UpdatedAt:   post.UpdatedAt,
+			}
+			for _, media := range post.Media {
+				mediaResp := pb.MediasResponse{
+					PostId: media.PostId,
+					Link:   media.Link,
+					Name:   media.Name,
+					Type:   media.Type,
+				}
+				postResp.Media = append(postResp.Media, &mediaResp)
+			}
+			customer.Posts = append(customer.Posts, &postResp)
+		}
+	}
 	if err != nil {
 		s.logger.Error("error getting customers ", l.Any("error geting customers", err))
 		return &pb.ListCustomers{}, status.Error(codes.Internal, "something went wrong")
