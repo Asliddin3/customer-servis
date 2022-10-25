@@ -5,10 +5,10 @@ import (
 )
 
 type CustomerStorageI interface {
-	CreateCustomer(*pb.CustomerRequest)(*pb.CustomerResponse,error)
-	UpdateCustomer(*pb.CustomerResponse)(*pb.CustomerResponse,error)
-	DeleteCustomer(*pb.CustomerId)(*pb.Empty,error)
-	GetById(*pb.CustomerId)(*pb.CustomerResponsePost,error)
-	GetListCustomers(*pb.Empty)(*pb.ListCustomers,error)
-	GetCustomerInfo(*pb.CustomerId) (*pb.CustomerResponse,error)
+	CreateCustomer(*pb.CustomerRequest) (*pb.CustomerResponse, error)
+	UpdateCustomer(*pb.CustomerUpdate) (*pb.CustomerResponse, error)
+	DeleteCustomer(*pb.CustomerId) (*pb.Empty, error)
+	GetById(*pb.CustomerId) (*pb.CustomerResponsePost, error)
+	GetListCustomers(*pb.Empty) (*pb.ListCustomers, error)
+	GetCustomerInfo(*pb.CustomerId) (*pb.CustomerResponse, error)
 }

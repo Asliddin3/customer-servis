@@ -6,6 +6,7 @@ import (
 
 	pb "github.com/Asliddin3/customer-servis/genproto/customer"
 	post "github.com/Asliddin3/customer-servis/genproto/post"
+	"github.com/Asliddin3/customer-servis/genproto/review"
 
 	l "github.com/Asliddin3/customer-servis/pkg/logger"
 	grpcclient "github.com/Asliddin3/customer-servis/service/grpc_client"
@@ -122,6 +123,19 @@ func (s *CustomerService) GetListCustomers(ctx context.Context, req *pb.Empty) (
 			}
 			customer.Posts = append(customer.Posts, &postResp)
 		}
+		reviews, err := s.Client.ReviewServise().GetCustomerReviews(context.Background(), &review.CustomerId{Id: customer.Id})
+		if err != nil {
+			s.logger.Error("error getting customer reviews ", l.Any("error getting reviews", err))
+			return &pb.ListCustomers{}, status.Error(codes.Internal, "something went wrong")
+		}
+		for _, review := range reviews.ReviewList {
+			customer.Reviews = append(customer.Reviews, &pb.ReviewList{
+				Id:          review.Id,
+				PostId:      review.PostId,
+				Description: review.Description,
+				Review:      review.Review,
+			})
+		}
 	}
 	if err != nil {
 		s.logger.Error("error getting customers ", l.Any("error geting customers", err))
@@ -129,7 +143,7 @@ func (s *CustomerService) GetListCustomers(ctx context.Context, req *pb.Empty) (
 	}
 	return customers, nil
 }
-func (s *CustomerService) UpdateCustomer(ctx context.Context, req *pb.CustomerResponse) (*pb.CustomerResponse, error) {
+func (s *CustomerService) UpdateCustomer(ctx context.Context, req *pb.CustomerUpdate) (*pb.CustomerResponse, error) {
 	customer, err := s.storage.Customer().UpdateCustomer(req)
 	if err != nil {
 		s.logger.Error("error while updating customer", l.Any("error updating customer", err))

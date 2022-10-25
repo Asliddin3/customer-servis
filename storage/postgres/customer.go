@@ -19,7 +19,7 @@ func NewCustomerRepo(db *sqlx.DB) *customerRepo {
 func (r *customerRepo) GetById(req *pb.CustomerId) (*pb.CustomerResponsePost, error) {
 	var customerPostResp pb.CustomerResponsePost
 	err := r.db.QueryRow(`
-	select id,firstname,lastname,bio,email,phonenumber,created_at,updated_at from customer where id=$1
+	select id,firstname,lastname,bio,email,phonenumber,created_at,updated_at from customer where id=$1 and deleted_at is null
 	`, req.Id).Scan(&customerPostResp.Id, &customerPostResp.FirstName, &customerPostResp.LastName, &customerPostResp.Bio,
 		&customerPostResp.Email, &customerPostResp.PhoneNumber, &customerPostResp.CreatedAt, &customerPostResp.UpdatedAt,
 	)
@@ -47,7 +47,7 @@ func (r *customerRepo) GetById(req *pb.CustomerId) (*pb.CustomerResponsePost, er
 func (r *customerRepo) GetCustomerInfo(req *pb.CustomerId) (*pb.CustomerResponse, error) {
 	customerInfo := pb.CustomerResponse{Id: req.Id}
 	err := r.db.QueryRow(`
-	select firstname,lastname,bio,email,phonenumber,created_at,updated_at from customer where id=$1
+	select firstname,lastname,bio,email,phonenumber,created_at,updated_at from customer where id=$1 and deleted_at is null
 	`, customerInfo.Id).Scan(&customerInfo.FirstName, &customerInfo.LastName, &customerInfo.Bio,
 		&customerInfo.Email, &customerInfo.PhoneNumber, &customerInfo.CreatedAt, &customerInfo.UpdatedAt)
 	if err != nil {
@@ -138,7 +138,7 @@ func (r *customerRepo) GetListCustomers(req *pb.Empty) (*pb.ListCustomers, error
 	return &listCustomers, nil
 }
 
-func (r *customerRepo) UpdateCustomer(req *pb.CustomerResponse) (*pb.CustomerResponse, error) {
+func (r *customerRepo) UpdateCustomer(req *pb.CustomerUpdate) (*pb.CustomerResponse, error) {
 	customerResp := pb.CustomerResponse{}
 	err := r.db.QueryRow(`
 	update customer set firstname=$1,lastname=$2,bio=$3,email=$4,phonenumber=$5,updated_at=current_timestamp
@@ -172,7 +172,7 @@ func (r *customerRepo) CreateCustomer(req *pb.CustomerRequest) (*pb.CustomerResp
 	err := r.db.QueryRow(
 		`insert into customer(firstname,lastname,bio,email,phonenumber) values($1,$2,$3,$4,$5)
 			returning id,firstname,lastname,bio,email,phonenumber,created_at,updated_at
-		`, req.Firstname, req.Lastname, req.Bio, req.Email, req.Phonenumber,
+		`, req.FirstName, req.LastName, req.Bio, req.Email, req.PhoneNumber,
 	).Scan(&customerResp.Id, &customerResp.FirstName, &customerResp.LastName, &customerResp.Bio,
 		&customerResp.Email, &customerResp.PhoneNumber, &customerResp.CreatedAt, &customerResp.UpdatedAt)
 	fmt.Println(err)
