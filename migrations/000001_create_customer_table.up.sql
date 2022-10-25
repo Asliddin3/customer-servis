@@ -1,11 +1,11 @@
-CREATE TABLE address(
+CREATE TABLE if NOT exists address(
   id serial PRIMARY key,
   district VARCHAR(100),
   street VARCHAR(100)
 );
 
 
-CREATE Table customer(
+CREATE Table if NOT exists customer(
   id serial PRIMARY KEY,
   firstname VARCHAR(200),
   lastname VARCHAR(200),
@@ -17,7 +17,7 @@ CREATE Table customer(
   deleted_at TIMESTAMP
 );
 
-CREATE Table customer_address(
+CREATE Table if NOT exists customer_address(
   customer_id int REFERENCES customer(id),
   address_id int REFERENCES address(id)
 );

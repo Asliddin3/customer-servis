@@ -160,3 +160,12 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *pb.CustomerRe
 	}
 	return Customer, nil
 }
+
+func (s *CustomerService) CheckField(ctx context.Context, req *pb.CheckFieldRequest) (*pb.CheckFieldResponse, error) {
+	exist, err := s.storage.Customer().CheckField(req)
+	if err != nil {
+		s.logger.Error("error checking customer", l.Any("error checking customer", err))
+		return &pb.CheckFieldResponse{}, status.Error(codes.Internal, "something went wrong")
+	}
+	return exist, nil
+}

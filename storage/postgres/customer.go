@@ -166,6 +166,25 @@ func (r *customerRepo) UpdateCustomer(req *pb.CustomerUpdate) (*pb.CustomerRespo
 	return &customerResp, nil
 }
 
+func (r *customerRepo) CheckField(req *pb.CheckFieldRequest) (*pb.CheckFieldResponse, error) {
+	key := req.Key
+	if key == "email" {
+		var exists int
+		err := r.db.QueryRow(`
+		select count(*) from customer where email=$1 and deleted_at is null
+		`, req.Value).Scan(&exists)
+		if err != nil {
+			return &pb.CheckFieldResponse{}, err
+		}
+		if exists != 0 {
+			return &pb.CheckFieldResponse{Exists: true}, nil
+		} else {
+			return &pb.CheckFieldResponse{Exists: false}, nil
+		}
+	}
+	return &pb.CheckFieldResponse{Exists: false}, nil
+}
+
 func (r *customerRepo) CreateCustomer(req *pb.CustomerRequest) (*pb.CustomerResponse, error) {
 	customerResp := pb.CustomerResponse{}
 	fmt.Println(req)

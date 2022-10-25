@@ -1,0 +1,1 @@
+ALTER Table customer drop password;

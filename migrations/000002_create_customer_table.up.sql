@@ -1,0 +1,1 @@
+ALTER Table customer ADD password varchar(200);

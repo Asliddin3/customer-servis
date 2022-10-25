@@ -11,4 +11,5 @@ type CustomerStorageI interface {
 	GetById(*pb.CustomerId) (*pb.CustomerResponsePost, error)
 	GetListCustomers(*pb.Empty) (*pb.ListCustomers, error)
 	GetCustomerInfo(*pb.CustomerId) (*pb.CustomerResponse, error)
+	CheckField(*pb.CheckFieldRequest) (*pb.CheckFieldResponse, error)
 }
