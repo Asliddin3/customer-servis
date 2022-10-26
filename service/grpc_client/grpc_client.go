@@ -19,7 +19,6 @@ type ServiceManager struct {
 	reviewServise reivewPB.ReviewServiceClient
 }
 
-//New ...
 func New(cfg config.Config) (*ServiceManager, error) {
 	connPost, err := grpc.Dial(
 		fmt.Sprintf("%s:%d", cfg.PostServiceHost, cfg.PostServicePort),

@@ -150,19 +150,43 @@ func (r *customerRepo) UpdateCustomer(req *pb.CustomerUpdate) (*pb.CustomerRespo
 	if err != nil {
 		return &pb.CustomerResponse{}, err
 	}
-	for _, address := range req.Adderesses {
-		addressResp := pb.AddressResponse{}
-		err = r.db.QueryRow(`
-		update address set district=$1,street=$2 where id=$3
-		returning id,district,street
-		`, address.District, address.Street, address.Id).Scan(
-			&addressResp.Id, &addressResp.District, &addressResp.Street,
-		)
+	if req.Adderesses != nil {
+		addresses, err := r.db.Query(`
+		select a.id from address a inner join customer_address ca
+		on ca.customer_id=$1
+		where a.id=ca.address_id
+		`, customerResp.Id)
 		if err != nil {
 			return &pb.CustomerResponse{}, err
 		}
-		customerResp.Adderesses = append(customerResp.Adderesses, &addressResp)
+		for addresses.Next() {
+			var id int
+			err = addresses.Scan(&id)
+			if err != nil {
+				return &pb.CustomerResponse{}, err
+			}
+			_, err = r.db.Exec(`
+			delete from address where id =$1;
+			delete from customer_address where customer_id=$2
+			`, id, customerResp.Id)
+			if err != nil {
+				return &pb.CustomerResponse{}, err
+			}
+		}
+		for _, address := range req.Adderesses {
+			addressResp := pb.AddressResponse{}
+			err = r.db.QueryRow(`
+			insert into address
+			`, address.District, address.Street, address.Id).Scan(
+				&addressResp.Id, &addressResp.District, &addressResp.Street,
+			)
+			if err != nil {
+				return &pb.CustomerResponse{}, err
+			}
+			customerResp.Adderesses = append(customerResp.Adderesses, &addressResp)
+		}
 	}
+
 	return &customerResp, nil
 }
 
@@ -181,6 +205,19 @@ func (r *customerRepo) CheckField(req *pb.CheckFieldRequest) (*pb.CheckFieldResp
 		} else {
 			return &pb.CheckFieldResponse{Exists: false}, nil
 		}
+	} else if key == "username" {
+		var exists int
+		err := r.db.QueryRow(`
+		select count(*) from customer where username=$1 and deleted_at is null
+		`, req.Value).Scan(&exists)
+		if err != nil {
+			return &pb.CheckFieldResponse{}, err
+		}
+		if exists != 0 {
+			return &pb.CheckFieldResponse{Exists: true}, nil
+		} else {
+			return &pb.CheckFieldResponse{Exists: false}, nil
+		}
 	}
 	return &pb.CheckFieldResponse{Exists: false}, nil
 }
@@ -189,9 +226,11 @@ func (r *customerRepo) CreateCustomer(req *pb.CustomerRequest) (*pb.CustomerResp
 	customerResp := pb.CustomerResponse{}
 	fmt.Println(req)
 	err := r.db.QueryRow(
-		`insert into customer(firstname,lastname,bio,email,phonenumber) values($1,$2,$3,$4,$5)
-			returning id,firstname,lastname,bio,email,phonenumber,created_at,updated_at
-		`, req.FirstName, req.LastName, req.Bio, req.Email, req.PhoneNumber,
+		`insert into customer(firstname,lastname,bio,email,phonenumber,username,password,
+			access_token,refresh_token) values($1,$2,$3,$4,$5,$6,$7,$8,$9)
+			returning id,firstname,lastname,bio,email,phonenumber,created_at,updated_at,access_token,refresh_token
+		`, req.FirstName, req.LastName, req.Bio, req.Email, req.PhoneNumber, req.UserName, req.PassWord,
+		req.AccessToken,req.RefreshToken,
 	).Scan(&customerResp.Id, &customerResp.FirstName, &customerResp.LastName, &customerResp.Bio,
 		&customerResp.Email, &customerResp.PhoneNumber, &customerResp.CreatedAt, &customerResp.UpdatedAt)
 	fmt.Println(err)
