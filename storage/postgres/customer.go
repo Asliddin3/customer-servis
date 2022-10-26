@@ -228,7 +228,7 @@ func (r *customerRepo) CreateCustomer(req *pb.CustomerRequest) (*pb.CustomerResp
 	err := r.db.QueryRow(
 		`insert into customer(firstname,lastname,bio,email,phonenumber,username,password,
 			access_token,refresh_token) values($1,$2,$3,$4,$5,$6,$7,$8,$9)
-			returning id,firstname,lastname,bio,email,phonenumber,created_at,updated_at,access_token,refresh_token
+			returning id,firstname,lastname,bio,email,phonenumber,created_at,updated_at
 		`, req.FirstName, req.LastName, req.Bio, req.Email, req.PhoneNumber, req.UserName, req.PassWord,
 		req.AccessToken,req.RefreshToken,
 	).Scan(&customerResp.Id, &customerResp.FirstName, &customerResp.LastName, &customerResp.Bio,
