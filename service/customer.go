@@ -169,3 +169,21 @@ func (s *CustomerService) CheckField(ctx context.Context, req *pb.CheckFieldRequ
 	}
 	return exist, nil
 }
+
+func (s *CustomerService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
+	loginResp, err := s.storage.Customer().Login(req)
+	if err != nil {
+		s.logger.Error("error while logining", l.Error(err))
+		return &pb.LoginResponse{}, status.Error(codes.InvalidArgument, "wrong username or password")
+	}
+	return loginResp, nil
+}
+
+func (s *CustomerService) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequest) (*pb.LoginResponse, error) {
+	refreshToken, err := s.storage.Customer().RefreshToken(req)
+	if err != nil {
+		s.logger.Error("error refreshing token", l.Any("error updating access token", err))
+		return &pb.LoginResponse{}, err
+	}
+	return refreshToken, nil
+}

@@ -12,4 +12,6 @@ type CustomerStorageI interface {
 	GetListCustomers(*pb.Empty) (*pb.ListCustomers, error)
 	GetCustomerInfo(*pb.CustomerId) (*pb.CustomerResponse, error)
 	CheckField(*pb.CheckFieldRequest) (*pb.CheckFieldResponse, error)
+	Login(*pb.LoginRequest) (*pb.LoginResponse, error)
+	RefreshToken(*pb.RefreshTokenRequest) (*pb.LoginResponse, error)
 }

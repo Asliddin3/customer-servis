@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	pb "github.com/Asliddin3/customer-servis/genproto/customer"
-
 	"github.com/jmoiron/sqlx"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type customerRepo struct {
@@ -224,13 +224,13 @@ func (r *customerRepo) CheckField(req *pb.CheckFieldRequest) (*pb.CheckFieldResp
 
 func (r *customerRepo) CreateCustomer(req *pb.CustomerRequest) (*pb.CustomerResponse, error) {
 	customerResp := pb.CustomerResponse{}
-	fmt.Println(req)
+	fmt.Println(req.PassWord)
 	err := r.db.QueryRow(
 		`insert into customer(firstname,lastname,bio,email,phonenumber,username,password,
 			access_token,refresh_token) values($1,$2,$3,$4,$5,$6,$7,$8,$9)
 			returning id,firstname,lastname,bio,email,phonenumber,created_at,updated_at
 		`, req.FirstName, req.LastName, req.Bio, req.Email, req.PhoneNumber, req.UserName, req.PassWord,
-		req.AccessToken,req.RefreshToken,
+		req.AccessToken, req.RefreshToken,
 	).Scan(&customerResp.Id, &customerResp.FirstName, &customerResp.LastName, &customerResp.Bio,
 		&customerResp.Email, &customerResp.PhoneNumber, &customerResp.CreatedAt, &customerResp.UpdatedAt)
 	fmt.Println(err)
@@ -255,4 +255,42 @@ func (r *customerRepo) CreateCustomer(req *pb.CustomerRequest) (*pb.CustomerResp
 
 	return &customerResp, nil
 
+}
+
+func (r *customerRepo) Login(req *pb.LoginRequest) (*pb.LoginResponse, error) {
+	loginResponse := pb.LoginResponse{}
+	fmt.Println(req.UserName)
+	err := r.db.QueryRow(`
+	select id,firstname,lastname,email,bio,access_token,refresh_token,password from customer
+	where username=$1
+	`, req.UserName).Scan(&loginResponse.Id, &loginResponse.FirstName,
+		&loginResponse.LastName, &loginResponse.Email, &loginResponse.Bio,
+		&loginResponse.AccessToken, &loginResponse.RefreshToken, &loginResponse.PassWord)
+	if err != nil {
+		return &pb.LoginResponse{}, err
+	}
+
+	fmt.Println(req.Password)
+	fmt.Println(loginResponse.PassWord)
+	if err = bcrypt.CompareHashAndPassword([]byte(loginResponse.PassWord), []byte(req.Password)); err != nil {
+		return &pb.LoginResponse{}, err
+	}
+	return &loginResponse, nil
+}
+
+func (s *customerRepo) RefreshToken(req *pb.RefreshTokenRequest) (*pb.LoginResponse, error) {
+	customerResp := pb.LoginResponse{}
+	err := s.db.QueryRow(`
+	update customer set access_token=$1, refresh_token=$2 where id=$3
+	returning id,first_name,last_name,bio,email,password,
+	access_token,refresh_token
+	`, req.AccessToken, req.RefreshToken, req.Id).Scan(
+		&customerResp.Id, &customerResp.FirstName, &customerResp.LastName,
+		&customerResp.Bio, &customerResp.Email, &customerResp.PassWord,
+		&customerResp.AccessToken, &customerResp.RefreshToken,
+	)
+	if err != nil {
+		return &pb.LoginResponse{}, err
+	}
+	return &customerResp, nil
 }

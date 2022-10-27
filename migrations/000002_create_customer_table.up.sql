@@ -1,1 +1,1 @@
-ALTER Table customer ADD password varchar(200);
+ALTER Table customer ADD password text;
