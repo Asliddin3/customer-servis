@@ -147,6 +147,7 @@ func (r *customerRepo) UpdateCustomer(req *pb.CustomerUpdate) (*pb.CustomerRespo
 		&customerResp.Id, &customerResp.FirstName, &customerResp.LastName,
 		&customerResp.Bio, &customerResp.Email, &customerResp.PhoneNumber, &customerResp.CreatedAt, &customerResp.UpdatedAt,
 	)
+	fmt.Print("query error", err)
 	if err != nil {
 		return &pb.CustomerResponse{}, err
 	}
@@ -156,37 +157,47 @@ func (r *customerRepo) UpdateCustomer(req *pb.CustomerUpdate) (*pb.CustomerRespo
 		on ca.customer_id=$1
 		where a.id=ca.address_id
 		`, customerResp.Id)
+		fmt.Println("address query", err)
 		if err != nil {
 			return &pb.CustomerResponse{}, err
 		}
 		for addresses.Next() {
 			var id int
 			err = addresses.Scan(&id)
+			fmt.Println("error scan", err)
+			if err != nil {
+				return &pb.CustomerResponse{}, err
+			}
+			_,err = r.db.Exec(`
+			delete from customer_address where customer_id=$1;
+			`,customerResp.Id)
 			if err != nil {
 				return &pb.CustomerResponse{}, err
 			}
 			_, err = r.db.Exec(`
 			delete from address where id =$1;
-			delete from customer_address where customer_id=$2
-			`, id, customerResp.Id)
+			`, id)
 			if err != nil {
 				return &pb.CustomerResponse{}, err
 			}
+			fmt.Println("error delete", err)
+
 		}
 		for _, address := range req.Adderesses {
 			addressResp := pb.AddressResponse{}
 			err = r.db.QueryRow(`
-			insert into address
-			`, address.District, address.Street, address.Id).Scan(
+			insert into address (district,street) values($1,$2) returning id,district ,street
+			`, address.District, address.Street).Scan(
 				&addressResp.Id, &addressResp.District, &addressResp.Street,
 			)
+			fmt.Println("insertin address", err)
 			if err != nil {
 				return &pb.CustomerResponse{}, err
 			}
 			customerResp.Adderesses = append(customerResp.Adderesses, &addressResp)
 		}
 	}
-
+	fmt.Println(customerResp)
 	return &customerResp, nil
 }
 
@@ -226,11 +237,11 @@ func (r *customerRepo) CreateCustomer(req *pb.CustomerRequest) (*pb.CustomerResp
 	customerResp := pb.CustomerResponse{}
 	fmt.Println(req.PassWord)
 	err := r.db.QueryRow(
-		`insert into customer(firstname,lastname,bio,email,phonenumber,username,password,
-			refresh_token) values($1,$2,$3,$4,$5,$6,$7,$8)
+		`insert into customer(id,firstname,lastname,bio,email,phonenumber,username,password,
+			refresh_token) values($1,$2,$3,$4,$5,$6,$7,$8,$9)
 			returning id,firstname,lastname,bio,email,phonenumber,created_at,updated_at
-		`, req.FirstName, req.LastName, req.Bio, req.Email, req.PhoneNumber, req.UserName, req.PassWord,
-		 req.RefreshToken,
+		`, req.Id, req.FirstName, req.LastName, req.Bio, req.Email, req.PhoneNumber, req.UserName, req.PassWord,
+		req.RefreshToken,
 	).Scan(&customerResp.Id, &customerResp.FirstName, &customerResp.LastName, &customerResp.Bio,
 		&customerResp.Email, &customerResp.PhoneNumber, &customerResp.CreatedAt, &customerResp.UpdatedAt)
 	fmt.Println(err)
