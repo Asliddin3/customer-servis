@@ -80,7 +80,7 @@ func (r *customerRepo) DeleteCustomer(req *pb.CustomerId) (*pb.Empty, error) {
 }
 
 func (r *customerRepo) GetListCustomers(req *pb.Empty) (*pb.ListCustomers, error) {
-	CleanMap := func(mapOfFunc map[int]string) {
+	CleanMap := func(mapOfFunc map[string]string) {
 		for k := range mapOfFunc {
 			delete(mapOfFunc, k)
 		}
@@ -92,9 +92,9 @@ func (r *customerRepo) GetListCustomers(req *pb.Empty) (*pb.ListCustomers, error
 	if err != nil {
 		return &pb.ListCustomers{}, err
 	}
-	deletedCust := make(map[int]string)
+	deletedCust := make(map[string]string)
 	for rows.Next() {
-		var id int
+		var id string
 		var deleted_at string
 		err = rows.Scan(&id, &deleted_at)
 		if err != nil {
@@ -127,7 +127,7 @@ func (r *customerRepo) GetListCustomers(req *pb.Empty) (*pb.ListCustomers, error
 		}
 		customerResp.Adderesses = append(customerResp.Adderesses, &addreesResp)
 
-		if val, ok := deletedCust[int(customerResp.Id)]; ok {
+		if val, ok := deletedCust[customerResp.Id]; ok {
 			customerResp.DeletedAt = val
 			listCustomers.DeletedCustomers = append(listCustomers.DeletedCustomers, &customerResp)
 		} else {
@@ -227,10 +227,10 @@ func (r *customerRepo) CreateCustomer(req *pb.CustomerRequest) (*pb.CustomerResp
 	fmt.Println(req.PassWord)
 	err := r.db.QueryRow(
 		`insert into customer(firstname,lastname,bio,email,phonenumber,username,password,
-			access_token,refresh_token) values($1,$2,$3,$4,$5,$6,$7,$8,$9)
+			refresh_token) values($1,$2,$3,$4,$5,$6,$7,$8)
 			returning id,firstname,lastname,bio,email,phonenumber,created_at,updated_at
 		`, req.FirstName, req.LastName, req.Bio, req.Email, req.PhoneNumber, req.UserName, req.PassWord,
-		req.AccessToken, req.RefreshToken,
+		 req.RefreshToken,
 	).Scan(&customerResp.Id, &customerResp.FirstName, &customerResp.LastName, &customerResp.Bio,
 		&customerResp.Email, &customerResp.PhoneNumber, &customerResp.CreatedAt, &customerResp.UpdatedAt)
 	fmt.Println(err)
@@ -261,17 +261,15 @@ func (r *customerRepo) Login(req *pb.LoginRequest) (*pb.LoginResponse, error) {
 	loginResponse := pb.LoginResponse{}
 	fmt.Println(req.UserName)
 	err := r.db.QueryRow(`
-	select id,firstname,lastname,email,bio,access_token,refresh_token,password from customer
+	select id,firstname,lastname,email,bio,refresh_token,password from customer
 	where username=$1
 	`, req.UserName).Scan(&loginResponse.Id, &loginResponse.FirstName,
 		&loginResponse.LastName, &loginResponse.Email, &loginResponse.Bio,
-		&loginResponse.AccessToken, &loginResponse.RefreshToken, &loginResponse.PassWord)
+		&loginResponse.RefreshToken, &loginResponse.PassWord)
 	if err != nil {
 		return &pb.LoginResponse{}, err
 	}
 
-	fmt.Println(req.Password)
-	fmt.Println(loginResponse.PassWord)
 	if err = bcrypt.CompareHashAndPassword([]byte(loginResponse.PassWord), []byte(req.Password)); err != nil {
 		return &pb.LoginResponse{}, err
 	}
@@ -281,13 +279,13 @@ func (r *customerRepo) Login(req *pb.LoginRequest) (*pb.LoginResponse, error) {
 func (s *customerRepo) RefreshToken(req *pb.RefreshTokenRequest) (*pb.LoginResponse, error) {
 	customerResp := pb.LoginResponse{}
 	err := s.db.QueryRow(`
-	update customer set access_token=$1, refresh_token=$2 where id=$3
+	update customer set refresh_token=$2 where id=$3
 	returning id,first_name,last_name,bio,email,password,
 	access_token,refresh_token
-	`, req.AccessToken, req.RefreshToken, req.Id).Scan(
+	`, req.RefreshToken, req.RefreshToken, req.Id).Scan(
 		&customerResp.Id, &customerResp.FirstName, &customerResp.LastName,
 		&customerResp.Bio, &customerResp.Email, &customerResp.PassWord,
-		&customerResp.AccessToken, &customerResp.RefreshToken,
+		&customerResp.RefreshToken,
 	)
 	if err != nil {
 		return &pb.LoginResponse{}, err

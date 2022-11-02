@@ -6,7 +6,7 @@ CREATE TABLE if NOT exists address(
 
 
 CREATE Table if NOT exists customer(
-  id serial PRIMARY KEY,
+  id UUID PRIMARY KEY NOT NULL DEFAULT uuid_generate_v4(),
   firstname VARCHAR(200),
   lastname VARCHAR(200),
   bio TEXT,
@@ -18,6 +18,6 @@ CREATE Table if NOT exists customer(
 );
 
 CREATE Table if NOT exists customer_address(
-  customer_id int REFERENCES customer(id),
+  customer_id uuid REFERENCES customer(id),
   address_id int REFERENCES address(id)
 );
