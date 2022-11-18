@@ -273,7 +273,7 @@ func (r *customerRepo) Login(req *pb.LoginRequest) (*pb.LoginResponse, error) {
 	fmt.Println(req.UserName)
 	err := r.db.QueryRow(`
 	select id,firstname,lastname,email,bio,refresh_token,password from customer
-	where username=$1
+	where username=$1 and deleted_at is null
 	`, req.UserName).Scan(&loginResponse.Id, &loginResponse.FirstName,
 		&loginResponse.LastName, &loginResponse.Email, &loginResponse.Bio,
 		&loginResponse.RefreshToken, &loginResponse.PassWord)
@@ -290,10 +290,10 @@ func (r *customerRepo) Login(req *pb.LoginRequest) (*pb.LoginResponse, error) {
 func (s *customerRepo) RefreshToken(req *pb.RefreshTokenRequest) (*pb.LoginResponse, error) {
 	customerResp := pb.LoginResponse{}
 	err := s.db.QueryRow(`
-	update customer set refresh_token=$2 where id=$3
-	returning id,first_name,last_name,bio,email,password,
-	access_token,refresh_token
-	`, req.RefreshToken, req.RefreshToken, req.Id).Scan(
+	update customer set refresh_token=$1 where id=$2
+	returning id,firstname,lastname,bio,email,password,
+	refresh_token
+	`,  req.RefreshToken, req.Id).Scan(
 		&customerResp.Id, &customerResp.FirstName, &customerResp.LastName,
 		&customerResp.Bio, &customerResp.Email, &customerResp.PassWord,
 		&customerResp.RefreshToken,

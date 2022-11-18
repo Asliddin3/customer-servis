@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE TABLE if NOT exists address(
   id serial PRIMARY key,
   district VARCHAR(100),

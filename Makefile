@@ -19,7 +19,7 @@ create:
 	migrate create -ext sql -dir migrations -seq create_customer_table
 
 up-version:
-	migrate -source file:./migrations/ -database 'postgres://postgres:compos1995@localhost:5432/customerdb?sslmode=disable' up
+	migrate -source file:./migrations/ -database 'postgres://asliddin:123@customerdb:5431/customerdb?sslmode=disable' up
 
 down-version:
 	migrate -source file:./migrations/ -database 'postgres://postgres:compos1995@localhost:5432/customerdb?sslmode=disable' down
