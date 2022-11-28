@@ -168,9 +168,9 @@ func (r *customerRepo) UpdateCustomer(req *pb.CustomerUpdate) (*pb.CustomerRespo
 			if err != nil {
 				return &pb.CustomerResponse{}, err
 			}
-			_,err = r.db.Exec(`
+			_, err = r.db.Exec(`
 			delete from customer_address where customer_id=$1;
-			`,customerResp.Id)
+			`, customerResp.Id)
 			if err != nil {
 				return &pb.CustomerResponse{}, err
 			}
@@ -234,25 +234,27 @@ func (r *customerRepo) CheckField(req *pb.CheckFieldRequest) (*pb.CheckFieldResp
 }
 
 func (r *customerRepo) CreateCustomer(req *pb.CustomerRequest) (*pb.CustomerResponse, error) {
-	customerResp := pb.CustomerResponse{}
+	customerResp := &pb.CustomerResponse{}
 	fmt.Println(req.PassWord)
 	err := r.db.QueryRow(
-		`insert into customer(id,firstname,lastname,bio,email,phonenumber,username,password,
-			refresh_token) values($1,$2,$3,$4,$5,$6,$7,$8,$9)
+		`insert into customer(firstname,lastname,bio,email,phonenumber,username,password,
+			refresh_token) values($1,$2,$3,$4,$5,$6,$7,$8)
 			returning id,firstname,lastname,bio,email,phonenumber,created_at,updated_at
-		`, req.Id, req.FirstName, req.LastName, req.Bio, req.Email, req.PhoneNumber, req.UserName, req.PassWord,
+		`, req.FirstName, req.LastName, req.Bio, req.Email, req.PhoneNumber, req.UserName, req.PassWord,
 		req.RefreshToken,
 	).Scan(&customerResp.Id, &customerResp.FirstName, &customerResp.LastName, &customerResp.Bio,
 		&customerResp.Email, &customerResp.PhoneNumber, &customerResp.CreatedAt, &customerResp.UpdatedAt)
 	fmt.Println(err)
+	fmt.Println(customerResp)
 	if err != nil {
 		return &pb.CustomerResponse{}, err
 	}
 	for _, addres := range req.Adderesses {
-		addressResp := pb.AddressResponse{}
+		addressResp := &pb.AddressResponse{}
 		err = r.db.QueryRow(`
 		insert into address(district,street) values($1,$2) returning id,district,street
 		`, addres.District, addres.Street).Scan(&addressResp.Id, &addressResp.District, &addressResp.Street)
+		fmt.Println("is that here", err)
 		if err != nil {
 			return &pb.CustomerResponse{}, err
 		}
@@ -261,10 +263,10 @@ func (r *customerRepo) CreateCustomer(req *pb.CustomerRequest) (*pb.CustomerResp
 		if err != nil {
 			return &pb.CustomerResponse{}, err
 		}
-		customerResp.Adderesses = append(customerResp.Adderesses, &addressResp)
+		customerResp.Adderesses = append(customerResp.Adderesses, addressResp)
 	}
 
-	return &customerResp, nil
+	return customerResp, nil
 
 }
 
@@ -293,7 +295,7 @@ func (s *customerRepo) RefreshToken(req *pb.RefreshTokenRequest) (*pb.LoginRespo
 	update customer set refresh_token=$1 where id=$2
 	returning id,firstname,lastname,bio,email,password,
 	refresh_token
-	`,  req.RefreshToken, req.Id).Scan(
+	`, req.RefreshToken, req.Id).Scan(
 		&customerResp.Id, &customerResp.FirstName, &customerResp.LastName,
 		&customerResp.Bio, &customerResp.Email, &customerResp.PassWord,
 		&customerResp.RefreshToken,

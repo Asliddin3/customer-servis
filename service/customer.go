@@ -5,10 +5,12 @@ import (
 	"fmt"
 
 	pb "github.com/Asliddin3/customer-servis/genproto/customer"
+	pbp "github.com/Asliddin3/customer-servis/genproto/post"
 	post "github.com/Asliddin3/customer-servis/genproto/post"
 	"github.com/Asliddin3/customer-servis/genproto/review"
 
 	l "github.com/Asliddin3/customer-servis/pkg/logger"
+	"github.com/Asliddin3/customer-servis/pkg/messagebroker"
 	grpcclient "github.com/Asliddin3/customer-servis/service/grpc_client"
 	"github.com/Asliddin3/customer-servis/storage"
 	"github.com/jmoiron/sqlx"
@@ -17,17 +19,63 @@ import (
 )
 
 type CustomerService struct {
-	storage storage.IStorage
-	Client  *grpcclient.ServiceManager
-	logger  l.Logger
+	storage  storage.IStorage
+	Client   *grpcclient.ServiceManager
+	logger   l.Logger
+	producer map[string]messagebroker.Producer
 }
 
-func NewCustomerService(clinet *grpcclient.ServiceManager, db *sqlx.DB, log l.Logger) *CustomerService {
+func NewCustomerService(clinet *grpcclient.ServiceManager, db *sqlx.DB, log l.Logger, publisher map[string]messagebroker.Producer) *CustomerService {
 	return &CustomerService{
-		storage: storage.NewStoragePg(db),
-		Client:  clinet,
-		logger:  log,
+		storage:  storage.NewStoragePg(db),
+		Client:   clinet,
+		logger:   log,
+		producer: publisher,
 	}
+}
+
+func (s *CustomerService) produceMessage(raw *pb.CustomerResponse) error {
+	// data, err := raw.Marshal()
+	// if err != nil {
+	// 	return err
+	// }
+	post := pbp.PostRequest{
+		Name:        "Asliddin",
+		Description: "something ",
+		CustomerId:  raw.Id,
+	}
+	data, err := post.Marshal()
+	if err != nil {
+		return err
+	}
+	logPost := post.String()
+	fmt.Println(data, logPost)
+	err = s.producer["customer"].Produce([]byte("customer"), data, logPost)
+	fmt.Println("producer error in func", err)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *CustomerService) CreateCustomer(ctx context.Context, req *pb.CustomerRequest) (*pb.CustomerResponse, error) {
+	Customer, err := s.storage.Customer().CreateCustomer(req)
+	fmt.Println("servis", Customer, err)
+	if err != nil {
+		s.logger.Error("error while creating Customer", l.Any("error creating Customer", err))
+		return &pb.CustomerResponse{}, status.Error(codes.Internal, "something went wrong")
+	}
+
+	err = s.produceMessage(Customer)
+	fmt.Println("produce err", err)
+	fmt.Println(`
+	----------------------------------
+	----------------------------------\n`, err)
+	if err != nil {
+		s.logger.Error("Error while produce to Kafka", l.Any("error produce customer", err))
+		return &pb.CustomerResponse{}, status.Error(codes.Internal, err.Error())
+	}
+	return Customer, nil
 }
 
 func (s *CustomerService) GetCustomerInfo(ctx context.Context, req *pb.CustomerId) (*pb.CustomerResponse, error) {
@@ -150,15 +198,6 @@ func (s *CustomerService) UpdateCustomer(ctx context.Context, req *pb.CustomerUp
 		return &pb.CustomerResponse{}, status.Error(codes.Internal, "somthing went wrong")
 	}
 	return customer, nil
-}
-
-func (s *CustomerService) CreateCustomer(ctx context.Context, req *pb.CustomerRequest) (*pb.CustomerResponse, error) {
-	Customer, err := s.storage.Customer().CreateCustomer(req)
-	if err != nil {
-		s.logger.Error("error while creating Customer", l.Any("error creating Customer", err))
-		return &pb.CustomerResponse{}, status.Error(codes.Internal, "something went wrong")
-	}
-	return Customer, nil
 }
 
 func (s *CustomerService) CheckField(ctx context.Context, req *pb.CheckFieldRequest) (*pb.CheckFieldResponse, error) {

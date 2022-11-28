@@ -19,6 +19,8 @@ type Config struct {
 	PostServicePort   int
 	ReviewServiceHost string
 	ReviewServicePort int
+	KafkaHost         string
+	KafkaPort         int
 }
 
 func Load() Config {
@@ -35,6 +37,8 @@ func Load() Config {
 	c.ReviewServiceHost = cast.ToString(getOrReturnDefault("REVIEW_SERVICE_HOST", "review-servise"))
 	c.ReviewServicePort = cast.ToInt(getOrReturnDefault("REVIEW_SERVICE_PORT", 8840))
 	c.RPCPort = cast.ToString(getOrReturnDefault("RPC_PORT", ":8810"))
+	c.KafkaHost = cast.ToString(getOrReturnDefault("KAFKA_HOST", "kafka"))
+	c.KafkaPort = cast.ToInt(getOrReturnDefault("KAFKA_PORT", 9092))
 	return c
 }
 

@@ -5,8 +5,10 @@ import (
 
 	"github.com/Asliddin3/customer-servis/config"
 	pb "github.com/Asliddin3/customer-servis/genproto/customer"
+	"github.com/Asliddin3/customer-servis/kafka"
 	"github.com/Asliddin3/customer-servis/pkg/db"
 	"github.com/Asliddin3/customer-servis/pkg/logger"
+	"github.com/Asliddin3/customer-servis/pkg/messagebroker"
 	"github.com/Asliddin3/customer-servis/service"
 	grpcclient "github.com/Asliddin3/customer-servis/service/grpc_client"
 	"google.golang.org/grpc"
@@ -31,8 +33,17 @@ func main() {
 	if err != nil {
 		log.Fatal("error while connect to clients", logger.Error(err))
 	}
+	publisherMap := make(map[string]messagebroker.Producer)
+	customerPublisher := kafka.NewKafkaProducer(cfg, log, "customer.customer")
+	defer func() {
+		err := customerPublisher.Stop()
+		if err != nil {
+			log.Fatal("failed to stop kafka costumer", logger.Error(err))
+		}
+	}()
 
-	customerService := service.NewCustomerService(grpcClient, connDb, log)
+	publisherMap["customer"] = customerPublisher
+	customerService := service.NewCustomerService(grpcClient, connDb, log, publisherMap)
 	lis, err := net.Listen("tcp", cfg.RPCPort)
 	if err != nil {
 		log.Fatal("Error while listening: %v", logger.Error(err))
