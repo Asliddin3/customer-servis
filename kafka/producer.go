@@ -27,6 +27,8 @@ func NewKafkaProducer(conf config.Config, log logger.Logger, topic string) messa
 			Addr:         kafka.TCP(connString),
 			Topic:        topic,
 			BatchTimeout: time.Millisecond * 10,
+			// RequiredAcks: kafka.RequireAll,
+			// Async:        true,
 		},
 		log: log,
 	}

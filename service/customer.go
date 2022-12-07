@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	pb "github.com/Asliddin3/customer-servis/genproto/customer"
-	pbp "github.com/Asliddin3/customer-servis/genproto/post"
 	post "github.com/Asliddin3/customer-servis/genproto/post"
 
 	l "github.com/Asliddin3/customer-servis/pkg/logger"
@@ -33,7 +32,7 @@ func NewCustomerService(clinet *grpcclient.ServiceManager, db *sqlx.DB, log l.Lo
 	}
 }
 
-func (s *CustomerService) produceMessage(raw *pbp.PostRequest) error {
+func (s *CustomerService) produceMessage(raw *pb.CustomerRequest) error {
 	// data, err := raw.Marshal()
 	// if err != nil {
 	// 	return err
@@ -57,7 +56,7 @@ func (s *CustomerService) produceMessage(raw *pbp.PostRequest) error {
 	return nil
 }
 
-func (s *CustomerService) CreateCustomerPost(ctx context.Context, req *pb.CustomerPostRequest) (*pb.CustomerPostResponse, error) {
+func (s *CustomerService) CreateCustomerPost(ctx context.Context, req *pb.CustomerRequest) (*pb.CustomerResponse, error) {
 	customerReq := &pb.CustomerRequest{
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
@@ -67,22 +66,10 @@ func (s *CustomerService) CreateCustomerPost(ctx context.Context, req *pb.Custom
 	customer, err := s.storage.Customer().CreateCustomer(customerReq)
 	if err != nil {
 		s.logger.Error("error while creating Customer", l.Any("error creating Customer", err))
-		return &pb.CustomerPostResponse{}, status.Error(codes.Internal, "something went wrong")
-	}
-	postReq := pbp.PostRequest{
-		Name:        req.PostName,
-		Description: req.PostDescription,
-		CustomerId:  customer.Id,
-	}
-	for _, media := range req.Media {
-		postReq.Media = append(postReq.Media, &post.MediasRequest{
-			Name: media.Name,
-			Link: media.Link,
-			Type: media.Type,
-		})
+		return &pb.CustomerResponse{}, status.Error(codes.Internal, "something went wrong")
 	}
 
-	err = s.produceMessage(&postReq)
+	err = s.produceMessage(req)
 	fmt.Println("produce err", err)
 	fmt.Println(`
 	----------------------------------
@@ -92,12 +79,7 @@ func (s *CustomerService) CreateCustomerPost(ctx context.Context, req *pb.Custom
 	// 	s.logger.Error("error while creating post", l.Any("error creating post", err))
 	// 	return &pb.CustomerPostResponse{}, status.Error(codes.Internal, "something went wrong")
 	// }
-	customerPostResp := pb.CustomerPostResponse{
-		CustomerId: customer.Id,
-		FirstName:  customer.FirstName,
-		LastName:   customer.LastName,
-		Bio:        customer.Bio,
-	}
+
 	// for _, media := range post.Media {
 	// 	customerPostResp.Media = append(customerPostResp.Media, &pb.MediasResponse{
 	// 		Type: media.Type,
@@ -106,7 +88,7 @@ func (s *CustomerService) CreateCustomerPost(ctx context.Context, req *pb.Custom
 	// 		Id:   media.Id,
 	// 	})
 	// }
-	return &customerPostResp, nil
+	return customer, nil
 }
 
 func (s *CustomerService) CreateCustomer(ctx context.Context, req *pb.CustomerRequest) (*pb.CustomerResponse, error) {
@@ -191,31 +173,31 @@ func (s *CustomerService) DeleteCustomer(ctx context.Context, req *pb.CustomerId
 }
 func (s *CustomerService) GetListCustomers(ctx context.Context, req *pb.Empty) (*pb.ListCustomers, error) {
 	customers, err := s.storage.Customer().GetListCustomers(req)
-	for _, customer := range customers.ActiveCustomers {
-		posts, err := s.Client.PostServise().GetPostCustomerId(ctx, &post.CustomerId{Id: customer.Id})
-		if err != nil {
-			s.logger.Error("error gettinf customer posts", l.Any("error getting customer post", err))
-			return &pb.ListCustomers{}, status.Error(codes.Internal, "something went wrong")
-		}
-		for _, post := range posts.Posts {
-			postResp := pb.PostResponse{
-				Id:          post.Id,
-				Name:        post.Name,
-				Description: post.Description,
-				CreatedAt:   post.CreatedAt,
-				UpdatedAt:   post.UpdatedAt,
-			}
-			for _, media := range post.Media {
-				mediaResp := pb.MediasResponse{
-					Id:   media.Id,
-					Link: media.Link,
-					Name: media.Name,
-					Type: media.Type,
-				}
-				postResp.Media = append(postResp.Media, &mediaResp)
-			}
-			customer.Posts = append(customer.Posts, &postResp)
-		}
+	// for _, customer := range customers.ActiveCustomers {
+	// 	posts, err := s.Client.PostServise().GetPostCustomerId(ctx, &post.CustomerId{Id: customer.Id})
+	// 	if err != nil {
+	// 		s.logger.Error("error gettinf customer posts", l.Any("error getting customer post", err))
+	// 		return &pb.ListCustomers{}, status.Error(codes.Internal, "something went wrong")
+	// 	}
+	// 	for _, post := range posts.Posts {
+	// 		postResp := pb.PostResponse{
+	// 			Id:          post.Id,
+	// 			Name:        post.Name,
+	// 			Description: post.Description,
+	// 			CreatedAt:   post.CreatedAt,
+	// 			UpdatedAt:   post.UpdatedAt,
+	// 		}
+	// 		for _, media := range post.Media {
+	// 			mediaResp := pb.MediasResponse{
+	// 				Id:   media.Id,
+	// 				Link: media.Link,
+	// 				Name: media.Name,
+	// 				Type: media.Type,
+	// 			}
+	// 			postResp.Media = append(postResp.Media, &mediaResp)
+	// 		}
+	// 		customer.Posts = append(customer.Posts, &postResp)
+	// 	}
 		// reviews, err := s.Client.ReviewServise().GetCustomerReviews(context.Background(), &review.CustomerId{Id: customer.Id})
 		// if err != nil {
 		// 	s.logger.Error("error getting customer reviews ", l.Any("error getting reviews", err))
@@ -229,7 +211,7 @@ func (s *CustomerService) GetListCustomers(ctx context.Context, req *pb.Empty) (
 		// 		Review:      review.Review,
 		// 	})
 		// }
-	}
+	// }
 	if err != nil {
 		s.logger.Error("error getting customers ", l.Any("error geting customers", err))
 		return &pb.ListCustomers{}, status.Error(codes.InvalidArgument, fmt.Sprintf("error getting list customers %s", err))

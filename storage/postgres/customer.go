@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"fmt"
+	"strings"
 
 	pb "github.com/Asliddin3/customer-servis/genproto/customer"
 	"github.com/jmoiron/sqlx"
@@ -80,62 +81,106 @@ func (r *customerRepo) DeleteCustomer(req *pb.CustomerId) (*pb.Empty, error) {
 }
 
 func (r *customerRepo) GetListCustomers(req *pb.Empty) (*pb.ListCustomers, error) {
-	CleanMap := func(mapOfFunc map[string]string) {
-		for k := range mapOfFunc {
-			delete(mapOfFunc, k)
-		}
-	}
-	listCustomers := pb.ListCustomers{}
 	rows, err := r.db.Query(`
-	select id,deleted_at from customer where deleted_at is not null
+	select id,firstname,username,lastname,bio,email,phonenumber,created_at,updated_at,deleted_at
+	from customer
 	`)
 	if err != nil {
 		return &pb.ListCustomers{}, err
 	}
-	deletedCust := make(map[string]string)
+	customers := pb.ListCustomers{}
+	var deletet_at interface{}
 	for rows.Next() {
-		var id string
-		var deleted_at string
-		err = rows.Scan(&id, &deleted_at)
+		customer := &pb.CustomerFullInfo{}
+		err = rows.Scan(&customer.Id, &customer.FirstName, &customer.UserName, &customer.LastName,
+			&customer.Bio, &customer.Email, &customer.PhoneNumber, &customer.CreatedAt, &customer.UpdatedAt, &deletet_at)
 		if err != nil {
-			return &pb.ListCustomers{}, err
+			return nil, err
 		}
-		deletedCust[id] = deleted_at
-	}
-	rows, err = r.db.Query(`
-	select id,firstname,lastname,bio,email,phonenumber,created_at,updated_at from customer
-	`)
-	if err != nil {
-		return &pb.ListCustomers{}, err
-	}
-	defer CleanMap(deletedCust)
-
-	for rows.Next() {
-		customerResp := pb.CustomerFullInfo{}
-		err = rows.Scan(&customerResp.Id, &customerResp.FirstName,
-			&customerResp.LastName, &customerResp.Bio, &customerResp.Email,
-			&customerResp.PhoneNumber, &customerResp.CreatedAt, &customerResp.UpdatedAt)
-		if err != nil {
-			return &pb.ListCustomers{}, err
-		}
-		addreesResp := pb.AddressResponse{}
-		err = r.db.QueryRow(`
-		select a.id,a.district,a.street from address a inner join customer_address ca on ca.address_id=a.id where ca.customer_id=$1
-		`, customerResp.Id).Scan(&addreesResp.Id, &addreesResp.District, &addreesResp.Street)
-		if err != nil {
-			return &pb.ListCustomers{}, err
-		}
-		customerResp.Adderesses = append(customerResp.Adderesses, &addreesResp)
-
-		if val, ok := deletedCust[customerResp.Id]; ok {
-			customerResp.DeletedAt = val
-			listCustomers.DeletedCustomers = append(listCustomers.DeletedCustomers, &customerResp)
+		data := fmt.Sprintf("%s", deletet_at)
+		if strings.Contains(data, "nil") {
+			customer.DeletedAt = ""
 		} else {
-			listCustomers.ActiveCustomers = append(listCustomers.ActiveCustomers, &customerResp)
+			customer.DeletedAt = data
 		}
+		// switch v := deletet_at.(type) {
+		// case nil:
+		// 	customer.DeletedAt = ""
+		// default:
+		// 	customer.DeletedAt = fmt.Sprintf("%s", v)
+		// }
+		address, err := r.db.Query(`
+		select a.id,a.district,a.street from address a inner join customer_address ca on ca.address_id=a.id where ca.customer_id=$1
+		`, customer.Id)
+		if err != nil {
+			return &pb.ListCustomers{}, err
+		}
+		for address.Next() {
+			addreesResp := pb.AddressResponse{}
+			err = address.Scan(&addreesResp.Id, &addreesResp.District, &addreesResp.Street)
+			if err != nil {
+				return &pb.ListCustomers{}, err
+			}
+			customer.Adderesses = append(customer.Adderesses, &addreesResp)
+		}
+		customers.Customers = append(customers.Customers, customer)
 	}
+	// CleanMap := func(mapOfFunc map[string]string) {
+	// 	for k := range mapOfFunc {
+	// 		delete(mapOfFunc, k)
+	// 	}
+	// }
+	// listCustomers := pb.ListCustomers{}
+	// rows, err := r.db.Query(`
+	// select id,deleted_at from customer where deleted_at is not null
+	// `)
+	// if err != nil {
+	// 	return &pb.ListCustomers{}, err
+	// }
+	// deletedCust := make(map[string]string)
+	// for rows.Next() {
+	// 	var id string
+	// 	var deleted_at string
+	// 	err = rows.Scan(&id, &deleted_at)
+	// 	if err != nil {
+	// 		return &pb.ListCustomers{}, err
+	// 	}
+	// 	deletedCust[id] = deleted_at
+	// }
+	// rows, err = r.db.Query(`
+	// select id,firstname,lastname,bio,email,phonenumber,created_at,updated_at from customer
+	// `)
+	// if err != nil {
+	// 	return &pb.ListCustomers{}, err
+	// }
+	// defer CleanMap(deletedCust)
 
-	return &listCustomers, nil
+	// for rows.Next() {
+	// 	customerResp := pb.CustomerFullInfo{}
+	// 	err = rows.Scan(&customerResp.Id, &customerResp.FirstName,
+	// 		&customerResp.LastName, &customerResp.Bio, &customerResp.Email,
+	// 		&customerResp.PhoneNumber, &customerResp.CreatedAt, &customerResp.UpdatedAt)
+	// 	if err != nil {
+	// 		return &pb.ListCustomers{}, err
+	// 	}
+	// 	addreesResp := pb.AddressResponse{}
+	// 	err = r.db.QueryRow(`
+	// 	select a.id,a.district,a.street from address a inner join customer_address ca on ca.address_id=a.id where ca.customer_id=$1
+	// 	`, customerResp.Id).Scan(&addreesResp.Id, &addreesResp.District, &addreesResp.Street)
+	// 	if err != nil {
+	// 		return &pb.ListCustomers{}, err
+	// 	}
+	// 	customerResp.Adderesses = append(customerResp.Adderesses, &addreesResp)
+
+	// 	if val, ok := deletedCust[customerResp.Id]; ok {
+	// 		customerResp.DeletedAt = val
+	// 		listCustomers.DeletedCustomers = append(listCustomers.DeletedCustomers, &customerResp)
+	// 	} else {
+	// 		listCustomers.ActiveCustomers = append(listCustomers.ActiveCustomers, &customerResp)
+	// 	}
+	// }
+
+	return &customers, nil
 }
 
 func (r *customerRepo) UpdateCustomer(req *pb.CustomerUpdate) (*pb.CustomerResponse, error) {

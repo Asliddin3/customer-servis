@@ -29,6 +29,22 @@ func main() {
 	if err != nil {
 		log.Fatal("sqlx connection to postgres error", logger.Error(err))
 	}
+	// connection, err := kaf.Dial("tcp", net.JoinHostPort("kafka", "29092"))
+	// if err != nil {
+	// 	panic(err.Error())
+	// }
+	// customerTopicConfig := kaf.TopicConfig{Topic: "customer.customer", NumPartitions: 1, ReplicationFactor: 1}
+	// err = connection.CreateTopics(customerTopicConfig)
+	// if err != nil {
+	// 	log.Fatal("error while createing topic", logger.Error(err))
+	// }
+	// connection.Close()
+	// w := kaf.NewWriter(kaf.WriterConfig{
+	// 	Brokers: []string{"kafka:9092", "kafka:29092"},
+	// 	Topic:   "customer.customer",
+	// })
+	// fmt.Println(w)
+	// w.Close()
 	grpcClient, err := grpcclient.New(cfg)
 	if err != nil {
 		log.Fatal("error while connect to clients", logger.Error(err))
